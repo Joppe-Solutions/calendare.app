@@ -56,7 +56,7 @@ const plans = [
     features: [
       "Tudo do Pro, mais:",
       "Múltiplos usuários",
-      "Notificações por e-mail/SMS",
+      "Notificações por WhatsApp",
       "Pagamento de sinal online",
       "API para integrações",
       "Suporte prioritário",

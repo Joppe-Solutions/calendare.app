@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -21,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { CreditCard, ExternalLink, Loader2, Check, AlertCircle } from "lucide-react"
+import { CreditCard, ExternalLink, Loader2, Check, AlertCircle, QrCode, Landmark } from "lucide-react"
 import { toast } from "sonner"
 
 interface PaymentSettingsFormProps {
@@ -38,6 +39,10 @@ export function PaymentSettingsForm({ initialData }: PaymentSettingsFormProps) {
   const [publicKey, setPublicKey] = useState(initialData.payment_public_key || "")
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [pixEnabled, setPixEnabled] = useState(true)
+  const [creditCardEnabled, setCreditCardEnabled] = useState(true)
+  const [boletoEnabled, setBoletoEnabled] = useState(false)
+  const [sandboxMode, setSandboxMode] = useState(true)
 
   const handleSave = async () => {
     setLoading(true)
@@ -68,7 +73,7 @@ export function PaymentSettingsForm({ initialData }: PaymentSettingsFormProps) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Pagamentos</h1>
           <p className="text-muted-foreground">
-            Configure seu gateway de pagamento para receber online.
+            Configure seu gateway de pagamento para receber pagamentos online dos seus clientes.
           </p>
         </div>
 
@@ -79,7 +84,7 @@ export function PaymentSettingsForm({ initialData }: PaymentSettingsFormProps) {
               Gateway de Pagamento
             </CardTitle>
             <CardDescription>
-              Escolha qual gateway deseja integrar para receber pagamentos dos seus clientes.
+              Escolha o gateway de pagamento que deseja utilizar. Recomendamos o Asaas para o mercado brasileiro.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -90,12 +95,23 @@ export function PaymentSettingsForm({ initialData }: PaymentSettingsFormProps) {
                   <SelectValue placeholder="Selecione um gateway" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="asaas">Asaas (Recomendado)</SelectItem>
                   <SelectItem value="mercadopago">Mercado Pago</SelectItem>
                   <SelectItem value="pagarme">Pagar.me (Stark Bank)</SelectItem>
                 </SelectContent>
               </Select>
               {gateway && (
                 <p className="text-xs text-muted-foreground">
+                  {gateway === "asaas" && (
+                    <a 
+                      href="https://www.asaas.com" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-1"
+                    >
+                      Acessar painel do Asaas <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                   {gateway === "mercadopago" && (
                     <a 
                       href="https://www.mercadopago.com.br/developers/panel/app" 
@@ -122,39 +138,112 @@ export function PaymentSettingsForm({ initialData }: PaymentSettingsFormProps) {
 
             {gateway && (
               <>
+                {gateway === "asaas" && (
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="sandbox-mode">Modo Sandbox</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Use o modo sandbox para testar pagamentos sem cobranças reais
+                      </p>
+                    </div>
+                    <Switch
+                      id="sandbox-mode"
+                      checked={sandboxMode}
+                      onCheckedChange={setSandboxMode}
+                    />
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="access-token">
-                    {gateway === "mercadopago" ? "Access Token" : "Chave de API Secreta"}
+                    {gateway === "asaas" ? "API Key" : gateway === "mercadopago" ? "Access Token" : "Chave de API Secreta"}
                   </Label>
                   <Input
                     id="access-token"
                     type="password"
                     value={accessToken}
                     onChange={(e) => setAccessToken(e.target.value)}
-                    placeholder={gateway === "mercadopago" ? "APP_USR-xxxx" : "sk_xxxx"}
+                    placeholder={
+                      gateway === "asaas" 
+                        ? (sandboxMode ? "$aact_xxxx (Sandbox)" : "$aact_prod_xxxx (Produção)")
+                        : gateway === "mercadopago" 
+                          ? "APP_USR-xxxx" 
+                          : "sk_xxxx"
+                    }
                   />
                   <p className="text-xs text-muted-foreground">
-                    {gateway === "mercadopago" 
-                      ? "Encontre em: Credenciais > Access Token (produção ou teste)"
-                      : "Encontre em: Configurações > Chaves de API"}
+                    {gateway === "asaas" && (
+                      <>Encontre em: Minha Conta {"→"} Integrações {"→"} API Key. Use a chave de {sandboxMode ? "Sandbox" : "Produção"}.</>
+                    )}
+                    {gateway === "mercadopago" && (
+                      <>Encontre em: Credenciais {"→"} Access Token (produção ou teste)</>
+                    )}
+                    {gateway === "pagarme" && (
+                      <>Encontre em: Configurações {"→"} Chaves de API</>
+                    )}
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="public-key">
-                    {gateway === "mercadopago" ? "Public Key" : "Chave Pública"}
-                  </Label>
-                  <Input
-                    id="public-key"
-                    type="password"
-                    value={publicKey}
-                    onChange={(e) => setPublicKey(e.target.value)}
-                    placeholder={gateway === "mercadopago" ? "APP_USR-xxxx" : "pk_xxxx"}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Necessária para exibir formas de pagamento no checkout.
-                  </p>
-                </div>
+                {gateway === "asaas" && (
+                  <>
+                    <div className="space-y-4">
+                      <Label className="text-base">Formas de pagamento</Label>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100">
+                              <QrCode className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <Label htmlFor="pix-enabled" className="font-medium">PIX</Label>
+                              <p className="text-xs text-muted-foreground">Pagamento instantâneo 24/7</p>
+                            </div>
+                          </div>
+                          <Switch
+                            id="pix-enabled"
+                            checked={pixEnabled}
+                            onCheckedChange={setPixEnabled}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
+                              <CreditCard className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <Label htmlFor="credit-card-enabled" className="font-medium">Cartão de Crédito</Label>
+                              <p className="text-xs text-muted-foreground">Visa, Mastercard, Elo e mais</p>
+                            </div>
+                          </div>
+                          <Switch
+                            id="credit-card-enabled"
+                            checked={creditCardEnabled}
+                            onCheckedChange={setCreditCardEnabled}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100">
+                              <Landmark className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <div>
+                              <Label htmlFor="boleto-enabled" className="font-medium">Boleto Bancário</Label>
+                              <p className="text-xs text-muted-foreground">Compensação em até 3 dias úteis</p>
+                            </div>
+                          </div>
+                          <Switch
+                            id="boleto-enabled"
+                            checked={boletoEnabled}
+                            onCheckedChange={setBoletoEnabled}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                   <div className="flex items-start gap-2">
@@ -163,7 +252,11 @@ export function PaymentSettingsForm({ initialData }: PaymentSettingsFormProps) {
                       <p className="font-medium">Importante</p>
                       <p className="text-muted-foreground">
                         Mantenha suas chaves em segredo. Elas permitem acessar sua conta de pagamento.
-                        Use chaves de produção para receber pagamentos reais.
+                        {gateway === "asaas" && !sandboxMode && (
+                          <span className="block mt-1 text-amber-600">
+                            Você está no modo PRODUÇÃO. Pagamentos serão cobrados de verdade!
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>

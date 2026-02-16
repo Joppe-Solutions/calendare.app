@@ -10,7 +10,7 @@ export default async function PublicBookingPage({ params }: Props) {
   const { slug } = await params
 
   const businesses = await sql`
-    SELECT id, name, phone, address, show_weather_warning, logo_url, cover_url, primary_color 
+    SELECT id, name, phone, address, show_weather_warning, logo_url, cover_url, primary_color, payment_gateway, payment_access_token 
     FROM businesses 
     WHERE slug = ${slug}
   `
@@ -21,7 +21,7 @@ export default async function PublicBookingPage({ params }: Props) {
   const business = businesses[0]
 
   const services = await sql`
-    SELECT id, name, description, duration_minutes, price_cents, price_type, capacity, meeting_point, meeting_instructions 
+    SELECT id, name, description, duration_minutes, price_cents, price_type, capacity, meeting_point, meeting_instructions, payment_type, deposit_percentage 
     FROM services 
     WHERE business_id = ${business.id} AND is_active = true
     ORDER BY name
@@ -53,6 +53,7 @@ export default async function PublicBookingPage({ params }: Props) {
           logoUrl: business.logo_url as string | null,
           coverUrl: business.cover_url as string | null,
           primaryColor: (business.primary_color as string) || '#10B981',
+          paymentEnabled: !!(business.payment_gateway && business.payment_access_token),
         }}
         services={services.map((s) => ({
           id: s.id as string,
@@ -64,6 +65,8 @@ export default async function PublicBookingPage({ params }: Props) {
           capacity: (s.capacity as number) || 1,
           meeting_point: s.meeting_point as string | null,
           meeting_instructions: s.meeting_instructions as string | null,
+          payment_type: (s.payment_type as 'on_site' | 'deposit' | 'full') || 'on_site',
+          deposit_percentage: (s.deposit_percentage as number) || 50,
         }))}
       />
     </main>

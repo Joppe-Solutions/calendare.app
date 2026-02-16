@@ -214,7 +214,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label>Tipo de preço</Label>
-                  <Select value={priceType} onValueChange={setPriceType}>
+                  <Select value={priceType} onValueChange={(v) => setPriceType(v as 'total' | 'per_person')}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -228,22 +228,53 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
 
               <div className="flex flex-col gap-2">
                 <Label>Forma de pagamento</Label>
-                <Select value={paymentType} onValueChange={setPaymentType}>
+                <Select value={paymentType} onValueChange={(v) => {
+                  setPaymentType(v as typeof paymentType)
+                  if (v === 'deposit') {
+                    setDepositPercentage(50)
+                  } else {
+                    setDepositPercentage(0)
+                  }
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="on_site">Pagar no local (fora do sistema)</SelectItem>
-                    <SelectItem value="deposit">Sinal de 50% antecipado</SelectItem>
+                    <SelectItem value="deposit">Sinal antecipado</SelectItem>
                     <SelectItem value="full">Pagamento total antecipado</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {paymentType === "on_site" && "O cliente paga diretamente com você no dia do serviço."}
-                  {paymentType === "deposit" && "O cliente paga 50% ao agendar e o resto no dia do serviço."}
+                  {paymentType === "deposit" && "O cliente paga uma parte ao agendar e o resto no dia do serviço."}
                   {paymentType === "full" && "O cliente paga o valor total ao fazer o agendamento."}
                 </p>
               </div>
+
+              {paymentType === 'deposit' && (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="deposit-percentage">Percentual do sinal (%)</Label>
+                  <Select 
+                    value={depositPercentage.toString()} 
+                    onValueChange={(v) => setDepositPercentage(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30%</SelectItem>
+                      <SelectItem value="40">40%</SelectItem>
+                      <SelectItem value="50">50%</SelectItem>
+                      <SelectItem value="60">60%</SelectItem>
+                      <SelectItem value="70">70%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    O cliente pagará {depositPercentage}% do valor ao agendar e o restante no local.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
