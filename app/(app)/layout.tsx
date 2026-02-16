@@ -3,7 +3,6 @@ import { redirect } from "next/navigation"
 import { sql } from "@/lib/db"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/app-sidebar"
-import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
 import { MobileHeader } from "@/components/layout/mobile-header"
 
 async function ensureUserExists(userId: string) {
@@ -61,16 +60,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         
         {/* Mobile Header */}
-        <MobileHeader businessSlug={business.slug as string} />
+        <MobileHeader businessSlug={business.slug as string} plan={(business.plan_id as string) || "free"} />
         
         {/* Main Content */}
         <main className="flex-1 overflow-auto pt-4 md:pt-0 md:p-6">
-          <div className="max-w-6xl mx-auto w-full px-4 md:px-0 pb-24 md:pb-0">
+          <div className="max-w-6xl mx-auto w-full px-4 md:px-0 pb-6 md:pb-0">
             {children}
           </div>
         </main>
       </SidebarInset>
-      <MobileBottomNav />
     </SidebarProvider>
   )
 }
