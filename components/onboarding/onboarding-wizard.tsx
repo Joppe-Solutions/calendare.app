@@ -90,7 +90,7 @@ export function OnboardingWizard({ userName }: OnboardingWizardProps) {
               <Input
                 id="businessName"
                 name="businessName"
-                placeholder="Ex: Barbearia do João"
+                placeholder="Ex: Barco do João"
                 required
               />
             </div>
@@ -104,11 +104,11 @@ export function OnboardingWizard({ userName }: OnboardingWizardProps) {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="address">Endereço</Label>
+              <Label htmlFor="address">Endereço / Local</Label>
               <Input
                 id="address"
                 name="address"
-                placeholder="Rua, número, bairro"
+                placeholder="Ex: Marina Porto Belo"
               />
             </div>
             <Button type="button" onClick={() => setStep(1)} className="w-full">
@@ -173,23 +173,36 @@ export function OnboardingWizard({ userName }: OnboardingWizardProps) {
               <Input
                 id="serviceName"
                 name="serviceName"
-                placeholder="Ex: Corte de cabelo"
+                placeholder="Ex: Passeio de barco (4h)"
               />
             </div>
-            <div className="flex gap-4">
-              <div className="flex flex-1 flex-col gap-2">
-                <Label htmlFor="serviceDuration">Duração (minutos)</Label>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="serviceDuration">Duração</Label>
                 <Input
                   id="serviceDuration"
                   name="serviceDuration"
                   type="number"
                   min="5"
                   step="5"
-                  defaultValue="60"
-                  placeholder="60"
+                  defaultValue="240"
+                  placeholder="240"
                 />
+                <p className="text-xs text-muted-foreground">minutos</p>
               </div>
-              <div className="flex flex-1 flex-col gap-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="serviceCapacity">Capacidade</Label>
+                <Input
+                  id="serviceCapacity"
+                  name="serviceCapacity"
+                  type="number"
+                  min="1"
+                  defaultValue="6"
+                  placeholder="6"
+                />
+                <p className="text-xs text-muted-foreground">pessoas</p>
+              </div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="servicePrice">Preço (R$)</Label>
                 <Input
                   id="servicePrice"
@@ -197,8 +210,9 @@ export function OnboardingWizard({ userName }: OnboardingWizardProps) {
                   type="number"
                   min="0"
                   step="0.01"
-                  placeholder="50.00"
+                  placeholder="150"
                 />
+                <p className="text-xs text-muted-foreground">por pessoa</p>
               </div>
             </div>
             <div className="flex gap-2 pt-2">

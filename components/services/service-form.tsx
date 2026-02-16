@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -45,7 +46,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{service ? "Editar serviço" : "Novo serviço"}</DialogTitle>
           <DialogDescription>
@@ -58,6 +59,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               {state.error}
             </div>
           )}
+          
           <div className="flex flex-col gap-2">
             <Label htmlFor="service-name">Nome *</Label>
             <Input
@@ -67,6 +69,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               required
             />
           </div>
+          
           <div className="flex flex-col gap-2">
             <Label htmlFor="service-description">Descrição</Label>
             <Textarea
@@ -77,6 +80,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               rows={2}
             />
           </div>
+          
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="service-duration">Duração (min)</Label>
@@ -90,6 +94,19 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               />
             </div>
             <div className="flex flex-col gap-2">
+              <Label htmlFor="service-capacity">Capacidade (vagas)</Label>
+              <Input
+                id="service-capacity"
+                name="capacity"
+                type="number"
+                min="1"
+                defaultValue={service?.capacity || 1}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="service-price">Preço (R$)</Label>
               <Input
                 id="service-price"
@@ -101,7 +118,41 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
                 placeholder="0.00"
               />
             </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="service-price-type">Tipo de preço</Label>
+              <select
+                id="service-price-type"
+                name="price_type"
+                defaultValue={service?.price_type || "total"}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="total">Valor total</option>
+                <option value="per_person">Por pessoa</option>
+              </select>
+            </div>
           </div>
+          
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="service-meeting-point">Local de encontro</Label>
+            <Input
+              id="service-meeting-point"
+              name="meeting_point"
+              defaultValue={service?.meeting_point || ""}
+              placeholder="Ex: Trapiche do Porto, Rua X, 123"
+            />
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="service-meeting-instructions">Instruções de como chegar</Label>
+            <Textarea
+              id="service-meeting-instructions"
+              name="meeting_instructions"
+              defaultValue={service?.meeting_instructions || ""}
+              placeholder="Ex: Estacionamento gratuito ao lado, chegar 15 min antes..."
+              rows={2}
+            />
+          </div>
+          
           <div className="flex flex-col gap-2">
             <Label>Cor</Label>
             <div className="flex gap-2">
@@ -122,6 +173,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               ))}
             </div>
           </div>
+          
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

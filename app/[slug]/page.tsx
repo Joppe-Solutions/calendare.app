@@ -10,7 +10,7 @@ export default async function PublicBookingPage({ params }: Props) {
   const { slug } = await params
 
   const businesses = await sql`
-    SELECT id, name, phone, address FROM businesses WHERE slug = ${slug}
+    SELECT id, name, phone, address, show_weather_warning FROM businesses WHERE slug = ${slug}
   `
   if (businesses.length === 0) {
     notFound()
@@ -19,7 +19,7 @@ export default async function PublicBookingPage({ params }: Props) {
   const business = businesses[0]
 
   const services = await sql`
-    SELECT id, name, description, duration_minutes, price_cents 
+    SELECT id, name, description, duration_minutes, price_cents, price_type, capacity, meeting_point, meeting_instructions 
     FROM services 
     WHERE business_id = ${business.id} AND is_active = true
     ORDER BY name
@@ -44,6 +44,7 @@ export default async function PublicBookingPage({ params }: Props) {
           name: business.name as string,
           phone: business.phone as string | null,
           address: business.address as string | null,
+          showWeatherWarning: business.show_weather_warning as boolean,
         }}
         services={services.map((s) => ({
           id: s.id as string,
@@ -51,6 +52,10 @@ export default async function PublicBookingPage({ params }: Props) {
           description: s.description as string | null,
           duration_minutes: s.duration_minutes as number,
           price_cents: s.price_cents as number | null,
+          price_type: (s.price_type as 'total' | 'per_person') || 'total',
+          capacity: (s.capacity as number) || 1,
+          meeting_point: s.meeting_point as string | null,
+          meeting_instructions: s.meeting_instructions as string | null,
         }))}
       />
     </main>

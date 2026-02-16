@@ -11,7 +11,7 @@ export default async function ServicosPage() {
   if (!business) return null
 
   const services = await sql`
-    SELECT id, name, description, duration_minutes, price_cents, color, is_active, created_at
+    SELECT id, name, description, duration_minutes, price_cents, price_type, capacity, color, meeting_point, meeting_instructions, is_active, created_at
     FROM services
     WHERE business_id = ${business.id}
     ORDER BY name
@@ -30,7 +30,11 @@ export default async function ServicosPage() {
           description: s.description as string | null,
           duration_minutes: s.duration_minutes as number,
           price_cents: s.price_cents as number | null,
+          price_type: (s.price_type as 'total' | 'per_person') || 'total',
+          capacity: (s.capacity as number) || 1,
           color: s.color as string,
+          meeting_point: s.meeting_point as string | null,
+          meeting_instructions: s.meeting_instructions as string | null,
           is_active: s.is_active as boolean,
           created_at: s.created_at as string,
         }))}

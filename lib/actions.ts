@@ -86,10 +86,11 @@ export async function completeOnboarding(formData: FormData) {
     const priceCents = formData.get("servicePrice")
       ? Math.round(parseFloat(formData.get("servicePrice") as string) * 100)
       : null
+    const capacity = parseInt(formData.get("serviceCapacity") as string) || 1
 
     await sql`
-      INSERT INTO services (business_id, name, duration_minutes, price_cents)
-      VALUES (${businessId}, ${serviceName}, ${duration}, ${priceCents})
+      INSERT INTO services (business_id, name, duration_minutes, price_cents, capacity)
+      VALUES (${businessId}, ${serviceName}, ${duration}, ${priceCents}, ${capacity})
     `
   }
 
@@ -111,13 +112,17 @@ export async function createService(formData: FormData) {
   const priceCents = formData.get("price")
     ? Math.round(parseFloat(formData.get("price") as string) * 100)
     : null
+  const priceType = (formData.get("price_type") as string) || "total"
+  const capacity = parseInt(formData.get("capacity") as string) || 1
+  const meetingPoint = (formData.get("meeting_point") as string)?.trim() || null
+  const meetingInstructions = (formData.get("meeting_instructions") as string)?.trim() || null
   const color = (formData.get("color") as string) || "#10B981"
 
   if (!name) return { error: "Informe o nome do serviço." }
 
   await sql`
-    INSERT INTO services (business_id, name, description, duration_minutes, price_cents, color)
-    VALUES (${business.id}, ${name}, ${description}, ${durationMinutes}, ${priceCents}, ${color})
+    INSERT INTO services (business_id, name, description, duration_minutes, price_cents, price_type, capacity, meeting_point, meeting_instructions, color)
+    VALUES (${business.id}, ${name}, ${description}, ${durationMinutes}, ${priceCents}, ${priceType}, ${capacity}, ${meetingPoint}, ${meetingInstructions}, ${color})
   `
 
   revalidatePath("/servicos")
@@ -138,13 +143,25 @@ export async function updateService(formData: FormData) {
   const priceCents = formData.get("price")
     ? Math.round(parseFloat(formData.get("price") as string) * 100)
     : null
+  const priceType = (formData.get("price_type") as string) || "total"
+  const capacity = parseInt(formData.get("capacity") as string) || 1
+  const meetingPoint = (formData.get("meeting_point") as string)?.trim() || null
+  const meetingInstructions = (formData.get("meeting_instructions") as string)?.trim() || null
   const color = (formData.get("color") as string) || "#10B981"
 
   if (!name) return { error: "Informe o nome do serviço." }
 
   await sql`
-    UPDATE services SET name = ${name}, description = ${description},
-      duration_minutes = ${durationMinutes}, price_cents = ${priceCents}, color = ${color}
+    UPDATE services SET 
+      name = ${name}, 
+      description = ${description},
+      duration_minutes = ${durationMinutes}, 
+      price_cents = ${priceCents}, 
+      price_type = ${priceType},
+      capacity = ${capacity},
+      meeting_point = ${meetingPoint},
+      meeting_instructions = ${meetingInstructions},
+      color = ${color}
     WHERE id = ${id} AND business_id = ${business.id}
   `
 
@@ -258,20 +275,37 @@ export async function createAppointment(formData: FormData) {
   const startTime = formData.get("start_time") as string
   const endTime = formData.get("end_time") as string
   const notes = (formData.get("notes") as string)?.trim() || null
+  const spots = parseInt(formData.get("spots") as string) || 1
 
   if (!serviceId || !clientName || !startTime || !endTime) {
     return { error: "Preencha todos os campos obrigatórios." }
   }
 
-  const conflicts = await sql`
-    SELECT id FROM appointments
+  const service = await sql`
+    SELECT capacity FROM services WHERE id = ${serviceId} AND business_id = ${business.id}
+  `
+  
+  if (service.length === 0) {
+    return { error: "Serviço não encontrado." }
+  }
+
+  const capacity = service[0].capacity as number
+
+  const existingBookings = await sql`
+    SELECT COALESCE(SUM(spots), 0) as total_spots
+    FROM appointments
     WHERE business_id = ${business.id}
+      AND service_id = ${serviceId}
       AND status != 'cancelled'
       AND start_time < ${endTime}::timestamptz
       AND end_time > ${startTime}::timestamptz
   `
-  if (conflicts.length > 0) {
-    return { error: "Já existe um agendamento neste horário." }
+
+  const bookedSpots = existingBookings[0]?.total_spots as number || 0
+  
+  if (bookedSpots + spots > capacity) {
+    const availableSpots = capacity - bookedSpots
+    return { error: `Apenas ${availableSpots} vaga(s) disponível(is) neste horário.` }
   }
 
   let finalClientId = clientId
@@ -297,8 +331,8 @@ export async function createAppointment(formData: FormData) {
   }
 
   await sql`
-    INSERT INTO appointments (business_id, service_id, client_id, client_name, client_phone, start_time, end_time, notes, source)
-    VALUES (${business.id}, ${serviceId}, ${finalClientId}, ${clientName}, ${clientPhone}, ${startTime}, ${endTime}, ${notes}, 'manual')
+    INSERT INTO appointments (business_id, service_id, client_id, client_name, client_phone, start_time, end_time, notes, spots, source)
+    VALUES (${business.id}, ${serviceId}, ${finalClientId}, ${clientName}, ${clientPhone}, ${startTime}, ${endTime}, ${notes}, ${spots}, 'manual')
   `
 
   revalidatePath("/agenda")

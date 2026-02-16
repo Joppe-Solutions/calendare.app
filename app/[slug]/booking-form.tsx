@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { CalendarDays, MapPin, Phone, Clock, CheckCircle } from "lucide-react"
+import { CalendarDays, MapPin, Phone, Clock, CheckCircle, Users, AlertTriangle } from "lucide-react"
 
 interface Service {
   id: string
@@ -18,6 +18,10 @@ interface Service {
   description: string | null
   duration_minutes: number
   price_cents: number | null
+  price_type: 'total' | 'per_person'
+  capacity: number
+  meeting_point: string | null
+  meeting_instructions: string | null
 }
 
 interface PublicBookingFormProps {
@@ -26,6 +30,7 @@ interface PublicBookingFormProps {
     name: string
     phone: string | null
     address: string | null
+    showWeatherWarning: boolean
   }
   services: Service[]
 }
@@ -36,7 +41,10 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [availableSpots, setAvailableSpots] = useState<number>(0)
+  const [serviceCapacity, setServiceCapacity] = useState<number>(1)
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const [spots, setSpots] = useState(1)
   const [clientName, setClientName] = useState("")
   const [clientPhone, setClientPhone] = useState("")
   const [notes, setNotes] = useState("")
@@ -62,8 +70,11 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
         const res = await fetch(`/api/availability?slug=${slug}&date=${dateStr}&service_id=${selectedService.id}`)
         const data = await res.json()
         setAvailableSlots(data.slots || [])
+        setAvailableSpots(data.capacity ? data.capacity - (data.bookedSpots || 0) : selectedService.capacity)
+        setServiceCapacity(data.capacity || selectedService.capacity)
       } catch {
         setAvailableSlots([])
+        setAvailableSpots(0)
       } finally {
         setLoadingSlots(false)
       }
@@ -91,6 +102,7 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
           date: format(selectedDate, "yyyy-MM-dd"),
           time: selectedTime,
           notes: notes || null,
+          spots,
         }),
       })
 
@@ -109,9 +121,10 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
     }
   }
 
-  function formatPrice(priceCents: number | null) {
+  function formatPrice(priceCents: number | null, priceType: string) {
     if (priceCents === null) return null
-    return (priceCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    const value = (priceCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    return priceType === 'per_person' ? `${value}/pessoa` : value
   }
 
   function formatDuration(minutes: number) {
@@ -119,6 +132,14 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`
+  }
+
+  function calculateTotalPrice() {
+    if (!selectedService || selectedService.price_cents === null) return null
+    if (selectedService.price_type === 'per_person') {
+      return (selectedService.price_cents / 100) * spots
+    }
+    return selectedService.price_cents / 100
   }
 
   if (success) {
@@ -136,6 +157,20 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
             {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
             {selectedTime && ` às ${selectedTime}`}
           </p>
+          {spots > 1 && (
+            <p className="text-muted-foreground">{spots} pessoas</p>
+          )}
+          {selectedService?.meeting_point && (
+            <div className="mt-4 p-3 bg-muted rounded-lg text-left">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <MapPin className="h-4 w-4" /> Local de encontro:
+              </p>
+              <p className="text-sm text-muted-foreground">{selectedService.meeting_point}</p>
+              {selectedService.meeting_instructions && (
+                <p className="text-sm text-muted-foreground mt-1">{selectedService.meeting_instructions}</p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     )
@@ -144,8 +179,8 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
   return (
     <Card className="w-full max-w-lg">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-          <CalendarDays className="h-6 w-6 text-primary-foreground" />
+        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500">
+          <CalendarDays className="h-6 w-6 text-white" />
         </div>
         <CardTitle className="text-2xl font-bold">{business.name}</CardTitle>
         <CardDescription>Agende seu horário</CardDescription>
@@ -163,19 +198,24 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
         )}
       </CardHeader>
       <CardContent>
-        {/* Step indicator */}
+        {business.showWeatherWarning && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+            <p>Agendamentos sujeitos a alteração por condições climáticas.</p>
+          </div>
+        )}
+
         <div className="flex items-center justify-center gap-2 mb-6">
           {[0, 1, 2].map((s) => (
             <div
               key={s}
               className={`h-2 w-8 rounded-full transition-colors ${
-                s <= step ? "bg-primary" : "bg-muted"
+                s <= step ? "bg-emerald-500" : "bg-muted"
               }`}
             />
           ))}
         </div>
 
-        {/* Step 0: Select service */}
         {step === 0 && (
           <div className="space-y-4">
             <Label className="text-base font-semibold">Selecione o serviço</Label>
@@ -184,13 +224,14 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
               onValueChange={(value) => {
                 const service = services.find((s) => s.id === value)
                 setSelectedService(service || null)
+                setSpots(1)
               }}
             >
               {services.map((service) => (
                 <div
                   key={service.id}
                   className={`flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-colors ${
-                    selectedService?.id === service.id ? "border-primary bg-primary/5" : "hover:border-muted-foreground/50"
+                    selectedService?.id === service.id ? "border-emerald-500 bg-emerald-50" : "hover:border-muted-foreground/50"
                   }`}
                   onClick={() => setSelectedService(service)}
                 >
@@ -203,15 +244,23 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
                       {service.description && (
                         <p className="text-sm text-muted-foreground">{service.description}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {formatDuration(service.duration_minutes)}
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDuration(service.duration_minutes)}
+                        </span>
+                        {service.capacity > 1 && (
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {service.capacity} vagas
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
-                  {service.price_cents !== null && (
-                    <span className="font-semibold">{formatPrice(service.price_cents)}</span>
-                  )}
+                  <span className="font-semibold text-right">
+                    {formatPrice(service.price_cents, service.price_type)}
+                  </span>
                 </div>
               ))}
             </RadioGroup>
@@ -225,7 +274,6 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
           </div>
         )}
 
-        {/* Step 1: Select date and time */}
         {step === 1 && (
           <div className="space-y-4">
             <div className="flex justify-center">
@@ -252,6 +300,7 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
                         variant={selectedTime === slot ? "default" : "outline"}
                         size="sm"
                         onClick={() => setSelectedTime(slot)}
+                        className={selectedTime === slot ? "bg-emerald-500 hover:bg-emerald-600" : ""}
                       >
                         {slot}
                       </Button>
@@ -280,7 +329,6 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
           </div>
         )}
 
-        {/* Step 2: Client info */}
         {step === 2 && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="rounded-lg bg-muted p-4 space-y-1">
@@ -291,10 +339,50 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
               </p>
             </div>
 
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
+            {selectedService && selectedService.capacity > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="spots">Número de pessoas</Label>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSpots(Math.max(1, spots - 1))}
+                    disabled={spots <= 1}
+                  >
+                    -
+                  </Button>
+                  <span className="text-lg font-medium w-8 text-center">{spots}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSpots(Math.min(availableSpots, spots + 1))}
+                    disabled={spots >= availableSpots}
+                  >
+                    +
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    ({availableSpots} disponíveis)
+                  </span>
+                </div>
               </div>
+            )}
+
+            {selectedService?.meeting_point && (
+              <div className="rounded-lg bg-muted p-3 space-y-1">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Local de encontro:
+                </p>
+                <p className="text-sm">{selectedService.meeting_point}</p>
+                {selectedService.meeting_instructions && (
+                  <p className="text-sm text-muted-foreground">{selectedService.meeting_instructions}</p>
+                )}
+              </div>
+            )}
+
+            {error && (
+              <p className="text-sm text-destructive text-center">{error}</p>
             )}
 
             <div className="space-y-2">
@@ -329,6 +417,22 @@ export function PublicBookingForm({ slug, business, services }: PublicBookingFor
                 rows={3}
               />
             </div>
+
+            {selectedService && selectedService.price_cents !== null && (
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total:</span>
+                  <span className="text-xl font-bold text-emerald-600">
+                    R$ {calculateTotalPrice()?.toFixed(2).replace(".", ",")}
+                  </span>
+                </div>
+                {selectedService.price_type === 'per_person' && spots > 1 && (
+                  <p className="text-sm text-muted-foreground text-right">
+                    {spots} x R$ {(selectedService.price_cents / 100).toFixed(2).replace(".", ",")}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setStep(1)}>

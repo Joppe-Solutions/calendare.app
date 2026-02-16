@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, MoreHorizontal, Pencil, Trash2, Clock, DollarSign } from "lucide-react"
+import { Plus, MoreHorizontal, Pencil, Trash2, Clock, DollarSign, Users, MapPin } from "lucide-react"
 import { ServiceForm } from "./service-form"
 import { toast } from "sonner"
 
@@ -21,9 +21,10 @@ const SERVICE_COLORS = [
   "#EC4899", "#14B8A6", "#F97316",
 ]
 
-function formatPrice(cents: number | null): string {
+function formatPrice(cents: number | null, priceType: string): string {
   if (cents === null) return "---"
-  return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`
+  const value = `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`
+  return priceType === 'per_person' ? `${value}/pessoa` : value
 }
 
 export function ServiceList({ services }: { services: ServiceRow[] }) {
@@ -95,13 +96,23 @@ export function ServiceList({ services }: { services: ServiceRow[] }) {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="flex items-center gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Badge variant="secondary" className="gap-1">
                     <Clock className="h-3 w-3" /> {service.duration_minutes} min
                   </Badge>
                   <Badge variant="secondary" className="gap-1">
-                    <DollarSign className="h-3 w-3" /> {formatPrice(service.price_cents)}
+                    <DollarSign className="h-3 w-3" /> {formatPrice(service.price_cents, service.price_type)}
                   </Badge>
+                  {service.capacity > 1 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Users className="h-3 w-3" /> {service.capacity} vagas
+                    </Badge>
+                  )}
+                  {service.meeting_point && (
+                    <Badge variant="outline" className="gap-1">
+                      <MapPin className="h-3 w-3" /> Local definido
+                    </Badge>
+                  )}
                   {!service.is_active && <Badge variant="outline">Inativo</Badge>}
                 </div>
               </CardContent>

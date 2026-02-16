@@ -15,6 +15,7 @@ export type AppointmentRow = {
   status: string
   notes: string | null
   source: string
+  spots: number
   created_at: string
   service_name: string
   service_color: string
@@ -33,6 +34,8 @@ export type ServiceOption = {
   name: string
   duration_minutes: number
   price_cents: number | null
+  price_type: 'total' | 'per_person'
+  capacity: number
   color: string
 }
 
@@ -57,7 +60,7 @@ export default async function AgendaPage() {
   if (!business) return null
 
   const [services, clients, workingHours] = await Promise.all([
-    sql`SELECT id, name, duration_minutes, price_cents, color FROM services WHERE business_id = ${business.id} AND is_active = true ORDER BY name`,
+    sql`SELECT id, name, duration_minutes, price_cents, price_type, capacity, color FROM services WHERE business_id = ${business.id} AND is_active = true ORDER BY name`,
     sql`SELECT id, name, phone FROM clients WHERE business_id = ${business.id} ORDER BY name`,
     sql`SELECT day_of_week, start_time, end_time, is_active FROM working_hours WHERE business_id = ${business.id} ORDER BY day_of_week`,
   ])
@@ -65,7 +68,15 @@ export default async function AgendaPage() {
   return (
     <AgendaView
       businessId={business.id as string}
-      services={services as ServiceOption[]}
+      services={services.map((s) => ({
+        id: s.id as string,
+        name: s.name as string,
+        duration_minutes: s.duration_minutes as number,
+        price_cents: s.price_cents as number | null,
+        price_type: (s.price_type as 'total' | 'per_person') || 'total',
+        capacity: (s.capacity as number) || 1,
+        color: s.color as string,
+      })) as ServiceOption[]}
       clients={clients as ClientOption[]}
       workingHours={workingHours as WorkingHoursRow[]}
     />

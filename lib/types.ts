@@ -13,7 +13,20 @@ export type ServiceRow = {
   description: string | null
   duration_minutes: number
   price_cents: number | null
+  price_type: 'total' | 'per_person'
+  capacity: number
   color: string
+  meeting_point: string | null
+  meeting_instructions: string | null
   is_active: boolean
   created_at: string
+}
+
+export type AppointmentWithSpots = {
+  id: string
+  service_id: string
+  spots: number
+  status: string
+  start_time: string
+  end_time: string
 }
