@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 
-const DAY_NAMES = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]
+const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]
 
 interface WorkingHoursFormProps {
   workingHours: { day_of_week: number; start_time: string; end_time: string; is_active: boolean }[]
@@ -57,7 +57,7 @@ export function WorkingHoursForm({ workingHours }: WorkingHoursFormProps) {
           )}
           <div className="flex flex-col gap-3">
             {hours.map((h, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="flex items-center gap-2 sm:gap-3">
                 <Switch
                   checked={h.active}
                   onCheckedChange={(checked) => {
@@ -66,9 +66,9 @@ export function WorkingHoursForm({ workingHours }: WorkingHoursFormProps) {
                     setHours(next)
                   }}
                 />
-                <span className="w-20 text-sm font-medium">{DAY_NAMES[i]}</span>
+                <span className="w-10 sm:w-16 text-sm font-medium">{DAY_NAMES[i]}</span>
                 {h.active ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 ml-auto">
                     <Input
                       type="time"
                       value={h.start}
@@ -77,9 +77,9 @@ export function WorkingHoursForm({ workingHours }: WorkingHoursFormProps) {
                         next[i] = { ...next[i], start: e.target.value }
                         setHours(next)
                       }}
-                      className="w-28"
+                      className="w-24 sm:w-28 h-9"
                     />
-                    <span className="text-muted-foreground">-</span>
+                    <span className="text-muted-foreground text-sm">-</span>
                     <Input
                       type="time"
                       value={h.end}
@@ -88,16 +88,16 @@ export function WorkingHoursForm({ workingHours }: WorkingHoursFormProps) {
                         next[i] = { ...next[i], end: e.target.value }
                         setHours(next)
                       }}
-                      className="w-28"
+                      className="w-24 sm:w-28 h-9"
                     />
                   </div>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Fechado</span>
+                  <span className="text-sm text-muted-foreground ml-auto">Fechado</span>
                 )}
               </div>
             ))}
           </div>
-          <Button type="submit" className="w-fit" disabled={isPending}>
+          <Button type="submit" className="w-full sm:w-fit" disabled={isPending}>
             {isPending ? "Salvando..." : "Salvar horários"}
           </Button>
         </form>

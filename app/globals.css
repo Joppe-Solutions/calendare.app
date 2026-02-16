@@ -47,6 +47,7 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
@@ -56,5 +57,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }

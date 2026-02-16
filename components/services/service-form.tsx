@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState, useRef } from "react"
 import type { ServiceRow } from "@/lib/types"
 import { createService, updateService } from "@/lib/actions"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "sonner"
+import { Image as ImageIcon, X, Loader2, Upload } from "lucide-react"
 
 interface ServiceFormProps {
   open: boolean
@@ -26,8 +35,45 @@ interface ServiceFormProps {
 }
 
 export function ServiceForm({ open, onOpenChange, service, colors }: ServiceFormProps) {
+  const [coverUrl, setCoverUrl] = useState(service?.cover_image_url || null)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+
+  const [priceType, setPriceType] = useState(service?.price_type || "total")
+  const [paymentType, setPaymentType] = useState(service?.payment_type || "on_site")
+  const [depositPercentage, setDepositPercentage] = useState(service?.deposit_percentage || 0)
+
+  const handleUploadCover = async (file: File) => {
+    setUploadingCover(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", "cover")
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Upload failed")
+
+      setCoverUrl(data.url)
+      toast.success("Imagem enviada!")
+    } catch (error) {
+      toast.error("Erro ao enviar imagem")
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
   const [state, formAction, isPending] = useActionState(
     async (_prev: { error?: string; success?: boolean } | null, formData: FormData) => {
+      formData.set("cover_image_url", coverUrl || "")
+      formData.set("price_type", priceType)
+      formData.set("payment_type", paymentType)
+      formData.set("deposit_percentage", depositPercentage.toString())
+      
       let result
       if (service) {
         formData.append("id", service.id)
@@ -59,7 +105,50 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               {state.error}
             </div>
           )}
-          
+
+          {/* Cover Image */}
+          <div className="flex flex-col gap-2">
+            <Label>Imagem de capa</Label>
+            {coverUrl ? (
+              <div className="relative w-full h-32 rounded-lg overflow-hidden border">
+                <img src={coverUrl} alt="Capa" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setCoverUrl(null)}
+                  className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="w-full h-32 rounded-lg border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                disabled={uploadingCover}
+              >
+                {uploadingCover ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="h-6 w-6 mb-1" />
+                    <span className="text-sm">Adicionar imagem</span>
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleUploadCover(file)
+              }}
+            />
+          </div>
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="service-name">Nome *</Label>
             <Input
@@ -69,7 +158,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               required
             />
           </div>
-          
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="service-description">Descrição</Label>
             <Textarea
@@ -80,7 +169,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               rows={2}
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="service-duration">Duração (min)</Label>
@@ -104,34 +193,61 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               />
             </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="service-price">Preço (R$)</Label>
-              <Input
-                id="service-price"
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={service?.price_cents ? (service.price_cents / 100).toFixed(2) : ""}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="service-price-type">Tipo de preço</Label>
-              <select
-                id="service-price-type"
-                name="price_type"
-                defaultValue={service?.price_type || "total"}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="total">Valor total</option>
-                <option value="per_person">Por pessoa</option>
-              </select>
-            </div>
-          </div>
-          
+
+          {/* Pricing Section */}
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <h4 className="font-medium text-sm">Preço</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="service-price">Valor (R$)</Label>
+                  <Input
+                    id="service-price"
+                    name="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    defaultValue={service?.price_cents ? (service.price_cents / 100).toFixed(2) : ""}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Tipo de preço</Label>
+                  <Select value={priceType} onValueChange={setPriceType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="total">Valor total</SelectItem>
+                      <SelectItem value="per_person">Por pessoa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label>Forma de pagamento</Label>
+                <Select value={paymentType} onValueChange={setPaymentType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="on_site">Pagar no local (fora do sistema)</SelectItem>
+                    <SelectItem value="deposit">Sinal de 50% antecipado</SelectItem>
+                    <SelectItem value="full">Pagamento total antecipado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {paymentType === "on_site" && "O cliente paga diretamente com você no dia do serviço."}
+                  {paymentType === "deposit" && "O cliente paga 50% ao agendar e o resto no dia do serviço."}
+                  {paymentType === "full" && "O cliente paga o valor total ao fazer o agendamento."}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Location Section */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="service-meeting-point">Local de encontro</Label>
             <Input
@@ -141,7 +257,7 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               placeholder="Ex: Trapiche do Porto, Rua X, 123"
             />
           </div>
-          
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="service-meeting-instructions">Instruções de como chegar</Label>
             <Textarea
@@ -152,10 +268,11 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
               rows={2}
             />
           </div>
-          
+
+          {/* Color */}
           <div className="flex flex-col gap-2">
-            <Label>Cor</Label>
-            <div className="flex gap-2">
+            <Label>Cor do serviço</Label>
+            <div className="flex gap-2 flex-wrap">
               {colors.map((color) => (
                 <label key={color} className="cursor-pointer">
                   <input
@@ -166,14 +283,14 @@ export function ServiceForm({ open, onOpenChange, service, colors }: ServiceForm
                     className="sr-only peer"
                   />
                   <div
-                    className="h-6 w-6 rounded-full ring-2 ring-transparent peer-checked:ring-ring peer-checked:ring-offset-2"
+                    className="h-7 w-7 rounded-full ring-2 ring-transparent peer-checked:ring-ring peer-checked:ring-offset-2 transition-all"
                     style={{ backgroundColor: color }}
                   />
                 </label>
               ))}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

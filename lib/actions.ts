@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { auth, clerkClient } from "@clerk/nextjs/server"
 import { sql } from "./db"
+import { PLAN_LIMITS, getPlanLimits } from "./plans"
 
 // ---- Helper to ensure user exists in local DB ----
 
@@ -106,6 +107,17 @@ export async function createService(formData: FormData) {
   const business = await getBusinessForUser(userId)
   if (!business) return { error: "Negócio não encontrado." }
 
+  const planLimits = getPlanLimits(business.plan_id as string)
+  
+  const currentServices = await sql`
+    SELECT COUNT(*) as count FROM services WHERE business_id = ${business.id}
+  `
+  const serviceCount = currentServices[0]?.count as number || 0
+  
+  if (serviceCount >= planLimits.maxServices) {
+    return { error: `Seu plano permite apenas ${planLimits.maxServices} serviço(s). Faça upgrade para criar mais.` }
+  }
+
   const name = (formData.get("name") as string)?.trim()
   const description = (formData.get("description") as string)?.trim() || null
   const durationMinutes = parseInt(formData.get("duration_minutes") as string) || 60
@@ -117,12 +129,15 @@ export async function createService(formData: FormData) {
   const meetingPoint = (formData.get("meeting_point") as string)?.trim() || null
   const meetingInstructions = (formData.get("meeting_instructions") as string)?.trim() || null
   const color = (formData.get("color") as string) || "#10B981"
+  const coverImageUrl = (formData.get("cover_image_url") as string)?.trim() || null
+  const paymentType = (formData.get("payment_type") as string) || "on_site"
+  const depositPercentage = parseInt(formData.get("deposit_percentage") as string) || 0
 
   if (!name) return { error: "Informe o nome do serviço." }
 
   await sql`
-    INSERT INTO services (business_id, name, description, duration_minutes, price_cents, price_type, capacity, meeting_point, meeting_instructions, color)
-    VALUES (${business.id}, ${name}, ${description}, ${durationMinutes}, ${priceCents}, ${priceType}, ${capacity}, ${meetingPoint}, ${meetingInstructions}, ${color})
+    INSERT INTO services (business_id, name, description, duration_minutes, price_cents, price_type, capacity, meeting_point, meeting_instructions, color, cover_image_url, payment_type, deposit_percentage)
+    VALUES (${business.id}, ${name}, ${description}, ${durationMinutes}, ${priceCents}, ${priceType}, ${capacity}, ${meetingPoint}, ${meetingInstructions}, ${color}, ${coverImageUrl}, ${paymentType}, ${depositPercentage})
   `
 
   revalidatePath("/servicos")
@@ -148,6 +163,9 @@ export async function updateService(formData: FormData) {
   const meetingPoint = (formData.get("meeting_point") as string)?.trim() || null
   const meetingInstructions = (formData.get("meeting_instructions") as string)?.trim() || null
   const color = (formData.get("color") as string) || "#10B981"
+  const coverImageUrl = (formData.get("cover_image_url") as string)?.trim() || null
+  const paymentType = (formData.get("payment_type") as string) || "on_site"
+  const depositPercentage = parseInt(formData.get("deposit_percentage") as string) || 0
 
   if (!name) return { error: "Informe o nome do serviço." }
 
@@ -161,7 +179,10 @@ export async function updateService(formData: FormData) {
       capacity = ${capacity},
       meeting_point = ${meetingPoint},
       meeting_instructions = ${meetingInstructions},
-      color = ${color}
+      color = ${color},
+      cover_image_url = ${coverImageUrl},
+      payment_type = ${paymentType},
+      deposit_percentage = ${depositPercentage}
     WHERE id = ${id} AND business_id = ${business.id}
   `
 
@@ -468,6 +489,6 @@ export async function updateWorkingHours(formData: FormData) {
 // ---- Helper ----
 
 export async function getBusinessForUser(userId: string) {
-  const rows = await sql`SELECT * FROM businesses WHERE user_id = ${userId}`
+  const rows = await sql`SELECT id, user_id, name, slug, phone, address, logo_url, cover_url, primary_color, plan_id FROM businesses WHERE user_id = ${userId}`
   return rows.length > 0 ? rows[0] : null
 }

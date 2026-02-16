@@ -9,6 +9,10 @@ import {
   Users,
   Settings,
   Link2,
+  LayoutDashboard,
+  CreditCard,
+  Sparkles,
+  DollarSign,
 } from "lucide-react"
 import {
   Sidebar,
@@ -23,9 +27,11 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 import { userButtonTheme } from "@/lib/clerk-theme"
 
 const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/agenda", label: "Agenda", icon: CalendarDays },
   { href: "/servicos", label: "Serviços", icon: Scissors },
   { href: "/clientes", label: "Clientes", icon: Users },
@@ -35,15 +41,17 @@ const navItems = [
 interface AppSidebarProps {
   user: { name: string; email: string }
   businessSlug?: string
+  plan?: string
 }
 
-export function AppSidebar({ user, businessSlug }: AppSidebarProps) {
+export function AppSidebar({ user, businessSlug, plan = "free" }: AppSidebarProps) {
   const pathname = usePathname()
+  const isFree = plan === "free"
 
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href="/agenda" className="flex items-center gap-2">
+        <Link href="/dashboard" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500">
             <CalendarDays className="h-4 w-4 text-white" />
           </div>
@@ -51,6 +59,24 @@ export function AppSidebar({ user, businessSlug }: AppSidebarProps) {
         </Link>
       </SidebarHeader>
       <SidebarSeparator />
+      
+      {/* Upgrade Banner for Free Users */}
+      {isFree && (
+        <div className="px-3 py-2">
+          <Link href="/planos">
+            <div className="rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-3 hover:from-primary/15 hover:to-primary/10 transition-colors">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Upgrade para Pro</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Serviços ilimitados e mais recursos
+              </p>
+            </div>
+          </Link>
+        </div>
+      )}
+      
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
@@ -58,7 +84,7 @@ export function AppSidebar({ user, businessSlug }: AppSidebarProps) {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                  <SidebarMenuButton asChild isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}>
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>
@@ -69,6 +95,26 @@ export function AppSidebar({ user, businessSlug }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        
+        <SidebarGroup>
+          <SidebarGroupLabel>Assinatura</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/planos"}>
+                  <Link href="/planos">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Meu plano</span>
+                    {isFree && (
+                      <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded">Free</span>
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
         {businessSlug && (
           <SidebarGroup>
             <SidebarGroupLabel>Link Público</SidebarGroupLabel>

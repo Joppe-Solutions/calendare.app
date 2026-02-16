@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       VALUES (
         ${business.id}, ${serviceId}, ${clientId}, ${clientName}, ${clientPhone || null},
         ${startTime.toISOString()}::timestamptz, ${endTime.toISOString()}::timestamptz, 
-        ${notes || null}, ${spots}, 'public'
+        ${notes || null}, ${spots}, 'online'
       )
     `
 

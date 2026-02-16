@@ -3,7 +3,8 @@ import { redirect } from "next/navigation"
 import { sql } from "@/lib/db"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/app-sidebar"
-import { Separator } from "@/components/ui/separator"
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
+import { MobileHeader } from "@/components/layout/mobile-header"
 
 async function ensureUserExists(userId: string) {
   const existing = await sql`SELECT id, name, email FROM users WHERE id = ${userId}`
@@ -38,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await ensureUserExists(userId)
 
   const businesses = await sql`
-    SELECT id, slug FROM businesses WHERE user_id = ${userId}
+    SELECT id, slug, plan_id FROM businesses WHERE user_id = ${userId}
   `
   if (businesses.length === 0) {
     redirect("/onboarding")
@@ -51,16 +52,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppSidebar
         user={user ? { name: user.name as string, email: user.email as string } : { name: "Usuário", email: "" }}
         businessSlug={business.slug as string}
+        plan={(business.plan_id as string) || "free"}
       />
-      <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-4">
+      <SidebarInset className="flex flex-col">
+        {/* Desktop Header */}
+        <header className="hidden md:flex h-14 items-center gap-2 border-b px-4">
           <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
         </header>
-        <div className="flex-1 overflow-auto p-4 md:p-6">
-          {children}
-        </div>
+        
+        {/* Mobile Header */}
+        <MobileHeader businessSlug={business.slug as string} />
+        
+        {/* Main Content */}
+        <main className="flex-1 overflow-auto pt-4 md:pt-0 md:p-6">
+          <div className="max-w-6xl mx-auto w-full px-4 md:px-0 pb-24 md:pb-0">
+            {children}
+          </div>
+        </main>
       </SidebarInset>
+      <MobileBottomNav />
     </SidebarProvider>
   )
 }

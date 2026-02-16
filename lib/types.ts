@@ -18,6 +18,9 @@ export type ServiceRow = {
   color: string
   meeting_point: string | null
   meeting_instructions: string | null
+  cover_image_url: string | null
+  payment_type: 'on_site' | 'deposit' | 'full'
+  deposit_percentage: number
   is_active: boolean
   created_at: string
 }

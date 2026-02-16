@@ -10,7 +10,9 @@ export default async function PublicBookingPage({ params }: Props) {
   const { slug } = await params
 
   const businesses = await sql`
-    SELECT id, name, phone, address, show_weather_warning FROM businesses WHERE slug = ${slug}
+    SELECT id, name, phone, address, show_weather_warning, logo_url, cover_url, primary_color 
+    FROM businesses 
+    WHERE slug = ${slug}
   `
   if (businesses.length === 0) {
     notFound()
@@ -29,6 +31,9 @@ export default async function PublicBookingPage({ params }: Props) {
     return (
       <main className="flex min-h-svh items-center justify-center bg-muted p-4">
         <div className="text-center">
+          {business.logo_url && (
+            <img src={business.logo_url as string} alt={business.name as string} className="w-20 h-20 mx-auto mb-4 object-contain" />
+          )}
           <h1 className="text-2xl font-bold">{business.name as string}</h1>
           <p className="text-muted-foreground mt-2">Nenhum serviço disponível para agendamento.</p>
         </div>
@@ -45,6 +50,9 @@ export default async function PublicBookingPage({ params }: Props) {
           phone: business.phone as string | null,
           address: business.address as string | null,
           showWeatherWarning: business.show_weather_warning as boolean,
+          logoUrl: business.logo_url as string | null,
+          coverUrl: business.cover_url as string | null,
+          primaryColor: (business.primary_color as string) || '#10B981',
         }}
         services={services.map((s) => ({
           id: s.id as string,
